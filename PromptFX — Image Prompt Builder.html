@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PromptFX — Image Prompt Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eceef8; --surface:#ffffff; --surface2:#f2f3fb; --ink:#14122b; --muted:#625f7e; --line:#d6d9ec;
+  --accent:#5b3df5; --accent-ink:#ffffff; --accent2:#ff4f81;
+  --shadow:0 1px 2px rgba(20,18,43,.06),0 8px 24px rgba(60,50,140,.10);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c0b16; --surface:#17152a; --surface2:#1f1c37; --ink:#f1eefc; --muted:#a39fc4; --line:#2e2a50;
+    --accent:#8a74ff; --accent-ink:#0c0b16; --accent2:#ff6b98;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c0b16; --surface:#17152a; --surface2:#1f1c37; --ink:#f1eefc; --muted:#a39fc4; --line:#2e2a50;
+  --accent:#8a74ff; --accent-ink:#0c0b16; --accent2:#ff6b98;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:1000px;margin:0 auto;padding:16px 14px 40px}
+.top{margin:4px 2px 14px}
+.top h1{margin:0;font:800 30px/1.05 "Bricolage Grotesque","DM Sans",system-ui,sans-serif;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.mark{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:17px}
+.top p{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:48ch}
+.grid{display:grid;gap:16px}
+@media (min-width:900px){
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+  .out{position:sticky;top:16px}
+}
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);padding:4px;border-radius:16px;box-shadow:var(--shadow)}
+.tab{border:0;background:transparent;border-radius:12px;padding:9px 2px;min-height:48px;font-weight:500;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--muted)}
+.tab span{font-size:17px;line-height:1}
+.tab[aria-selected="true"]{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700}
+.pane{background:var(--surface);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.pane[hidden]{display:none}
+.pane h3{margin:18px 0 8px;font:600 14px/1.2 "Bricolage Grotesque","DM Sans",sans-serif;color:var(--muted)}
+.pane h3:first-child{margin-top:0}
+label.lbl{display:block;font:600 14px/1.2 "Bricolage Grotesque","DM Sans",sans-serif;color:var(--muted);margin-bottom:8px}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px 12px;resize:vertical;min-height:44px}
+textarea:focus,input[type=text]:focus{border-color:var(--accent);outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 13px;min-height:38px;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.sw{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px 14px;min-height:42px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.small{min-height:38px;padding:7px 12px;font-size:14px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.fxgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.fx{border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:68px}
+.fx b{font-weight:700}
+.fx small{color:var(--muted);font-size:12px;line-height:1.3}
+.fx .em{font-size:20px;line-height:1}
+.fx[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--surface2));box-shadow:inset 0 0 0 1px var(--accent)}
+.sl{margin:10px 0}
+.sl-h{display:flex;justify-content:space-between;font-size:14px;margin-bottom:2px}
+.sl-h output{color:var(--muted);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.stickers{display:flex;flex-wrap:wrap;gap:6px}
+.stk{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);font-size:24px;line-height:1;padding:0}
+.stk[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--surface2));box-shadow:inset 0 0 0 1px var(--accent)}
+.note{margin:8px 0 0;color:var(--muted);font-size:13px}
+.out{background:var(--surface);border-radius:20px;padding:16px;box-shadow:var(--shadow);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line))}
+.out-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.out-head h2{margin:0;font:800 18px/1.2 "Bricolage Grotesque","DM Sans",sans-serif}
+.out-head span{color:var(--muted);font-size:13px}
+.outbox{background:var(--surface2);border-radius:12px;padding:12px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text;max-height:300px;overflow:auto}
+.outbox.empty{color:var(--muted)}
+.meta{margin:10px 0 0;font-size:13px;color:var(--muted);word-break:break-word}
+.meta b{color:var(--ink)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1><span class="mark">✦</span>PromptFX</h1>
+    <p>Rakit prompt gambar lengkap dengan efek ala Canva dan CapCut, lalu salin ke generator gambar favoritmu.</p>
+  </header>
+
+  <main class="grid">
+    <section class="panel">
+      <div class="tabs" role="tablist" aria-label="Menu prompt">
+        <button class="tab" role="tab" id="t-prompt" data-tab="prompt" aria-selected="true" aria-controls="pane-prompt" type="button"><span>✍️</span>Prompt</button>
+        <button class="tab" role="tab" id="t-look" data-tab="look" aria-selected="false" aria-controls="pane-look" type="button"><span>🎨</span>Filter</button>
+        <button class="tab" role="tab" id="t-fx" data-tab="fx" aria-selected="false" aria-controls="pane-fx" type="button"><span>🎬</span>Efek</button>
+        <button class="tab" role="tab" id="t-design" data-tab="design" aria-selected="false" aria-controls="pane-design" type="button"><span>🖼️</span>Desain</button>
+      </div>
+
+      <div class="pane" id="pane-prompt" role="tabpanel" aria-labelledby="t-prompt">
+        <label class="lbl" for="subject">Subjek gambar</label>
+        <textarea id="subject" rows="3" placeholder="Contoh: kucing oranye memakai jaket denim di atap kota saat senja"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn small" id="btnIdea" type="button">🎲 Acak ide</button></div>
+        <h3>Gaya</h3><div class="chips" id="g-style"></div>
+        <h3>Suasana</h3><div class="chips" id="g-mood"></div>
+        <h3>Cahaya</h3><div class="chips" id="g-light"></div>
+        <h3>Kamera</h3><div class="chips" id="g-cam"></div>
+        <h3>Rasio gambar</h3><div class="chips" id="g-ratio"></div>
+        <h3>Negative prompt</h3>
+        <input type="text" id="neg" aria-label="Negative prompt">
+      </div>
+
+      <div class="pane" id="pane-look" role="tabpanel" aria-labelledby="t-look" hidden>
+        <h3>Filter ala Canva</h3><div class="chips" id="g-look"></div>
+        <h3>Penyesuaian</h3><div id="g-adj"></div>
+        <p class="note">Penyesuaian baru masuk ke prompt kalau digeser cukup jauh dari tengah.</p>
+      </div>
+
+      <div class="pane" id="pane-fx" role="tabpanel" aria-labelledby="t-fx" hidden>
+        <h3>Efek ala CapCut</h3>
+        <div class="fxgrid" id="g-fx"></div>
+        <div id="g-int" style="margin-top:12px"></div>
+      </div>
+
+      <div class="pane" id="pane-design" role="tabpanel" aria-labelledby="t-design" hidden>
+        <h3>Preset tipografi</h3><div class="chips" id="g-tpreset"></div>
+        <label class="lbl" for="txt" style="margin-top:16px">Teks</label>
+        <textarea id="txt" rows="2" placeholder="Tulisan yang muncul di gambar, contoh: Senja di Kota"></textarea>
+        <h3>Font</h3><div class="chips" id="g-font"></div>
+        <h3>Huruf</h3><div class="chips" id="g-tcase"></div>
+        <h3>Jarak huruf</h3><div class="chips" id="g-ttrack"></div>
+        <h3>Rata teks</h3><div class="chips" id="g-talign"></div>
+        <h3>Efek tulisan ala Canva</h3><div class="chips" id="g-tcanva"></div>
+        <h3>Efek tulisan ala CapCut</h3><div class="chips" id="g-tcapcut"></div>
+        <h3>Warna teks</h3><div class="chips" id="g-tcolor"></div>
+        <h3>Posisi teks</h3><div class="chips" id="g-tpos"></div>
+        <h3>Bingkai</h3><div class="chips" id="g-frame"></div>
+        <h3>Stiker</h3>
+        <div class="stickers" id="g-stk"></div>
+      </div>
+    </section>
+
+    <section class="out" aria-live="polite">
+      <div class="out-head"><h2>Prompt akhir</h2><span id="cnt"></span></div>
+      <div class="outbox" id="outMain"></div>
+      <p class="meta" id="outMeta"></p>
+      <div class="actions">
+        <button class="btn primary" id="cpMain" type="button">Salin prompt</button>
+        <button class="btn" id="cpAll" type="button">Salin lengkap</button>
+        <button class="btn" id="btnReset" type="button">↺ Reset efek</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s);};
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- data ---------- */
+var STYLES=[
+ ['Fotorealistis','photorealistic, shot on a full-frame camera, natural textures'],
+ ['Anime','anime illustration, clean line art, vibrant cel shading'],
+ ['3D Render','3D render, soft global illumination, glossy materials'],
+ ['Cat air','watercolor painting, soft bleeding pigments, textured paper'],
+ ['Cyberpunk','cyberpunk aesthetic, neon-soaked futuristic city, rain reflections'],
+ ['Flat minimalis','flat vector illustration, minimalist shapes, limited color palette'],
+ ['Poster retro','retro poster design, halftone texture, bold graphic composition'],
+ ['Ilustrasi digital','detailed digital illustration, concept art, painterly brushwork']
+];
+var MOODS=[
+ ['Ceria','cheerful, joyful, upbeat mood'],['Dramatis','dramatic, intense mood'],['Tenang','calm, serene, peaceful mood'],
+ ['Misterius','mysterious, enigmatic atmosphere'],['Energik','energetic, dynamic, high-energy mood'],
+ ['Romantis','romantic, warm, tender mood'],['Nostalgia','nostalgic, wistful mood']
+];
+var LIGHTS=[
+ ['Golden hour','golden hour sunlight, warm long shadows'],['Neon malam','neon night lighting, colorful reflections'],
+ ['Softbox studio','soft studio lighting, even illumination'],['Backlight','strong backlight, glowing rim light'],
+ ['Mendung lembut','soft overcast diffused light'],['Rim light sinematik','cinematic rim lighting, deep shadows']
+];
+var CAMS=[
+ ['Close-up','close-up shot'],['Wide shot','wide establishing shot'],['Low angle','low angle shot, heroic perspective'],
+ ['Top-down','top-down view'],['Macro','macro photography, extreme detail'],['Bokeh 85mm','85mm lens, shallow depth of field, creamy bokeh']
+];
+var RATIOS=['1:1','4:5','9:16','16:9','3:4'];
+var IDEAS=[
+ 'seorang barista muda menyeduh kopi di warung kecil saat hujan, Jakarta',
+ 'kucing oranye memakai jaket denim duduk di atap kota saat senja',
+ 'penari Bali di tengah sawah terasering saat matahari terbit',
+ 'robot tukang bakso keliling di gang neon masa depan',
+ 'sepasang sepeda tua bersandar di tembok biru kota tua',
+ 'astronot kecil menanam bunga di permukaan bulan',
+ 'pasar apung di Banjarmasin dengan perahu penuh buah warna-warni',
+ 'gadis berpayung merah berjalan di jalan basah malam hari'
+];
+var LOOKS=[
+ {id:'asli',n:'Asli',sw:['#e6e6ef','#9a98b0'],p:''},
+ {id:'vintage',n:'Vintage',sw:['#e2bd8a','#6b4a2b'],p:'vintage faded film look, warm sepia tones, nostalgic color grading'},
+ {id:'pastel',n:'Pastel',sw:['#ffd1e8','#c8b6ff'],p:'soft pastel color palette, airy and light, dreamy tones'},
+ {id:'duoviolet',n:'Duotone ungu',sw:['#2b1055','#ff9acb'],p:'duotone treatment in deep purple and pink'},
+ {id:'duosun',n:'Duotone sunset',sw:['#1a0b3b','#ffb347'],p:'duotone gradient map, indigo shadows and amber highlights'},
+ {id:'pop',n:'Pop bold',sw:['#ff3d71','#ffd93d'],p:'bold pop-art saturation, high contrast, vivid punchy colors'},
+ {id:'cine',n:'Sinematik',sw:['#0f6a7a','#e8913a'],p:'cinematic teal and orange color grading, film look, moody contrast'},
+ {id:'bw',n:'Hitam putih',sw:['#111111','#eeeeee'],p:'high contrast black and white photography, deep blacks'},
+ {id:'matte',n:'Matte',sw:['#8b8fa3','#d9d4cf'],p:'matte faded blacks, muted editorial color grade'},
+ {id:'neon',n:'Neon malam',sw:['#00e5ff','#ff2bd6'],p:'neon-lit night palette, magenta and cyan glow'}
+];
+var FXS=[
+ {id:'glitch',n:'Glitch RGB',e:'⚡',d:'Irisan acak dan pecah warna',p:'digital glitch effect, RGB chromatic aberration, horizontal slice distortion'},
+ {id:'vhs',n:'VHS retro',e:'📼',d:'Garis scan dan noise kaset',p:'VHS tape aesthetic, scanlines, tracking noise, 90s camcorder look'},
+ {id:'glow',n:'Glow mimpi',e:'💡',d:'Cahaya lembut menyebar',p:'dreamy bloom glow, luminous halos around highlights'},
+ {id:'grain',n:'Grain film',e:'🎞️',d:'Butiran film analog',p:'analog film grain texture'},
+ {id:'shake',n:'Shake',e:'📳',d:'Getaran kamera genggam',p:'handheld camera shake, subtle motion blur, kinetic energy'},
+ {id:'zoom',n:'Zoom pulse',e:'🔍',d:'Zoom masuk dengan blur radial',p:'punch-in zoom, radial motion blur toward center'},
+ {id:'flash',n:'Flash',e:'✨',d:'Kilatan putih dan light leak',p:'camera flash burst, overexposed highlights, light leak'}
+];
+var FONTS=[
+ ['anton','Poster','bold condensed poster sans-serif'],['serif','Elegan','elegant high-contrast italic serif'],
+ ['hand','Tulisan tangan','handwritten brush script'],['sans','Modern','clean modern geometric sans-serif'],
+ ['display','Display tebal','chunky heavy display typeface'],['mono','Mono','monospace typewriter typeface'],
+ ['slab','Slab retro','retro slab serif'],['grot','Grotesk','editorial grotesque sans-serif']
+];
+var TCASE=[['upper','HURUF BESAR','all caps'],['title','Kapital Judul','title case'],['lower','huruf kecil','lowercase']];
+var TTRACK=[['tight','Rapat','tight letter spacing'],['normal','Normal',''],['wide','Lebar','wide tracked-out letter spacing']];
+var TALIGN=[['left','Kiri','left-aligned'],['center','Tengah','center-aligned'],['right','Kanan','right-aligned']];
+var TCANVA=[
+ ['shadow','Shadow','soft drop shadow'],['lift','Lift','soft lifted shadow, floating text'],
+ ['hollow','Hollow','hollow outlined letters with transparent fill'],['outline','Outline tebal','thick contrasting outline stroke'],
+ ['splice','Splice','spliced text with an offset outline shadow'],['echo','Echo','echo effect with repeated fading copies of the text'],
+ ['box','Background','text on a solid color highlight label'],['curve','Curve','text curved along an arc']
+];
+var TCAPCUT=[
+ ['neon','Neon glow','glowing neon sign text with a bright halo'],['glitch','Glitch','glitch text with RGB split and slice distortion'],
+ ['chrome','Chrome','liquid chrome metallic text with sharp reflections'],['gold','Emas 3D','glossy 3D extruded gold text'],
+ ['gradient','Gradient','vivid gradient-filled text'],['retro','Retro 80s','retro 80s synthwave text with striped sunset gradient'],
+ ['sticker','Sticker cut','die-cut sticker text with a thick white border'],['motion','Kinetic','kinetic text with motion blur trails']
+];
+var TCOLORS=[['white','Putih','white'],['black','Hitam','black'],['yellow','Kuning','bright yellow'],['pink','Pink','hot pink'],['cyan','Cyan','neon cyan'],['red','Merah','vivid red'],['gold','Emas','metallic gold']];
+var PRESETS=[
+ {n:'Poster film',s:{font:'anton',tcase:'upper',ttrack:'wide',talign:'center',tcanva:null,tcapcut:'chrome',tcolor:'white',tpos:'bottom'}},
+ {n:'Judul Reels',s:{font:'display',tcase:'upper',ttrack:'normal',talign:'center',tcanva:'outline',tcapcut:'glitch',tcolor:'yellow',tpos:'center'}},
+ {n:'Neon sign',s:{font:'sans',tcase:'upper',ttrack:'wide',talign:'center',tcanva:null,tcapcut:'neon',tcolor:'pink',tpos:'center'}},
+ {n:'Editorial majalah',s:{font:'serif',tcase:'title',ttrack:'tight',talign:'left',tcanva:'lift',tcapcut:null,tcolor:'white',tpos:'top'}},
+ {n:'Retro 80s',s:{font:'slab',tcase:'upper',ttrack:'normal',talign:'center',tcanva:null,tcapcut:'retro',tcolor:'cyan',tpos:'center'}},
+ {n:'Minimal aesthetic',s:{font:'grot',tcase:'lower',ttrack:'wide',talign:'center',tcanva:null,tcapcut:null,tcolor:'white',tpos:'bottom'}},
+ {n:'Sticker lucu',s:{font:'display',tcase:'title',ttrack:'normal',talign:'center',tcanva:null,tcapcut:'sticker',tcolor:'yellow',tpos:'center'}}
+];
+var TPOS=[['top','Atas','top'],['center','Tengah','center'],['bottom','Bawah','bottom']];
+var FRAMES=[['none','Tanpa',''],['thin','Border putih','clean white border frame'],['polaroid','Polaroid','instant polaroid photo frame with white border'],['neon','Neon','glowing neon border outline'],['round','Sudut bulat','rounded corner card framing']];
+var STICKERS=[['⭐','star'],['✨','sparkles'],['🔥','flame'],['💖','heart'],['🎉','party confetti'],['🌈','rainbow'],['😎','sunglasses'],['🫶','heart hands'],['🌸','cherry blossom'],['⚡','lightning bolt'],['👑','crown'],['🎀','ribbon']];
+
+/* ---------- state ---------- */
+var DEF_ADJ={b:100,c:100,s:100,v:0};
+var S={
+ subject:'',style:null,mood:null,light:null,cam:null,ratio:'4:5',
+ neg:'blurry, low quality, watermark, extra fingers, distorted text',
+ look:'asli',adj:{b:100,c:100,s:100,v:0},fx:{},intensity:60,
+ text:'',font:'anton',tcase:null,ttrack:'normal',talign:'center',tcanva:'outline',tcapcut:null,tcolor:'white',tpos:'bottom',
+ frame:'none',stk:{}
+};
+function pick(list,id){for(var i=0;i<list.length;i++)if(list[i][0]===id)return list[i];return list[0];}
+
+/* ---------- prompt ---------- */
+var cur={text:'',ready:false};
+function buildPrompt(){
+ var P=[],subj=S.subject.trim();
+ P.push(subj||'[tulis subjek gambar]');
+ if(S.style!=null)P.push(STYLES[S.style][1]);
+ if(S.mood!=null)P.push(MOODS[S.mood][1]);
+ if(S.light!=null)P.push(LIGHTS[S.light][1]);
+ if(S.cam!=null)P.push(CAMS[S.cam][1]);
+ var lk=null;LOOKS.forEach(function(l){if(l.id===S.look)lk=l;});
+ if(lk&&lk.p)P.push(lk.p);
+ var a=S.adj;
+ if(a.b>115)P.push('bright, high-key exposure');else if(a.b<85)P.push('dark, low-key exposure');
+ if(a.c>115)P.push('high contrast');else if(a.c<85)P.push('low contrast, soft tones');
+ if(a.s>130)P.push('vivid, highly saturated colors');else if(a.s<70)P.push('desaturated, muted colors');
+ if(a.v>50)P.push('strong vignette');else if(a.v>15)P.push('subtle vignette');
+ var iw=S.intensity<=35?'subtle ':(S.intensity>=75?'strong ':'');
+ FXS.forEach(function(f){if(S.fx[f.id])P.push(iw+f.p);});
+ var tx=S.text.trim();
+ if(tx){
+  var T=['with the text "'+tx+'" clearly written on the image in '+pick(FONTS,S.font)[2]+' lettering'];
+  if(S.tcase!=null)T.push(pick(TCASE,S.tcase)[2]);
+  var tk=pick(TTRACK,S.ttrack)[2];if(tk)T.push(tk);
+  T.push(pick(TCOLORS,S.tcolor)[2]+' text');
+  if(S.tcanva!=null)T.push(pick(TCANVA,S.tcanva)[2]);
+  if(S.tcapcut!=null)T.push(pick(TCAPCUT,S.tcapcut)[2]);
+  T.push(pick(TALIGN,S.talign)[2]+' alignment, placed at the '+pick(TPOS,S.tpos)[2]+' of the image');
+  T.push('professional typographic hierarchy, Canva-style graphic layout');
+  P.push(T.join(', '));
+ }
+ var fr=pick(FRAMES,S.frame);if(fr[2])P.push(fr[2]);
+ var names=[];STICKERS.forEach(function(s){if(S.stk[s[0]])names.push(s[1]);});
+ if(names.length)P.push('decorated with playful sticker elements: '+names.join(', '));
+ P.push('highly detailed, sharp focus, professional composition');
+ return {text:P.join(', '),ready:!!subj};
+}
+function buildOut(){
+ cur=buildPrompt();
+ var o=$('#outMain');o.textContent=cur.text;o.className='outbox'+(cur.ready?'':' empty');
+ $('#cnt').textContent=cur.text.length+' karakter';
+ var neg=S.neg.trim();
+ $('#outMeta').innerHTML='<b>Rasio:</b> '+S.ratio+' (Midjourney: --ar '+S.ratio+')'+(neg?'<br><b>Negative:</b> '+esc(neg):'');
+ $('#cpMain').disabled=!cur.ready;$('#cpAll').disabled=!cur.ready;
+ $('#cpMain').title=cur.ready?'':'Isi subjek dulu';
+}
+function copy(text,btn){
+ var label=btn.textContent;
+ function done(){btn.textContent='Tersalin ✓';setTimeout(function(){btn.textContent=label;},1500);}
+ function fallback(){
+  try{
+   var ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');
+   ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+   document.execCommand('copy');ta.remove();done();
+  }catch(e){btn.textContent='Tekan lama teks untuk menyalin';setTimeout(function(){btn.textContent=label;},2500);}
+ }
+ try{
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fallback);}
+  else fallback();
+ }catch(e){fallback();}
+}
+
+/* ---------- UI builders ---------- */
+var syncs=[];
+function syncChips(){
+ document.querySelectorAll('.chip[data-key]').forEach(function(b){
+  b.setAttribute('aria-pressed',String(S[b.dataset.key])===b.dataset.v?'true':'false');
+ });
+}
+function mkChips(hostId,key,items,optional){
+ var host=$(hostId);host.setAttribute('role','group');
+ items.forEach(function(it){
+  var b=el('button','chip',it.h||esc(it.l));b.type='button';b.dataset.key=key;b.dataset.v=String(it.v);
+  b.addEventListener('click',function(){
+   var same=String(S[key])===String(it.v);
+   S[key]=(same&&optional)?null:it.v;
+   syncChips();buildOut();
+  });
+  host.appendChild(b);
+ });
+}
+function mkSlider(hostId,label,min,max,get,set,unit){
+ var host=$(hostId),w=el('div','sl'),id='sl'+Math.random().toString(36).slice(2,8);
+ w.innerHTML='<div class="sl-h"><label for="'+id+'">'+label+'</label><output></output></div><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" value="'+get()+'">';
+ var inp=w.querySelector('input'),out=w.querySelector('output');
+ function show(){out.textContent=inp.value+(unit||'');}
+ show();
+ inp.addEventListener('input',function(){set(+inp.value);show();buildOut();});
+ host.appendChild(w);
+ syncs.push(function(){inp.value=get();show();});
+}
+function renderFx(){
+ var host=$('#g-fx');host.innerHTML='';
+ FXS.forEach(function(f){
+  var b=el('button','fx','<span class="em">'+f.e+'</span><b>'+f.n+'</b><small>'+f.d+'</small>');
+  b.type='button';b.setAttribute('aria-pressed',S.fx[f.id]?'true':'false');
+  b.addEventListener('click',function(){
+   S.fx[f.id]=!S.fx[f.id];b.setAttribute('aria-pressed',S.fx[f.id]?'true':'false');buildOut();
+  });
+  host.appendChild(b);
+ });
+}
+function renderStickers(){
+ var host=$('#g-stk');host.innerHTML='';
+ STICKERS.forEach(function(s){
+  var b=el('button','stk',s[0]);b.type='button';b.setAttribute('aria-label','Stiker '+s[1]);
+  b.setAttribute('aria-pressed',S.stk[s[0]]?'true':'false');
+  b.addEventListener('click',function(){
+   S.stk[s[0]]=!S.stk[s[0]];b.setAttribute('aria-pressed',S.stk[s[0]]?'true':'false');buildOut();
+  });
+  host.appendChild(b);
+ });
+}
+
+function init(){
+ mkChips('#g-style','style',STYLES.map(function(s,i){return {v:i,l:s[0]};}),true);
+ mkChips('#g-mood','mood',MOODS.map(function(s,i){return {v:i,l:s[0]};}),true);
+ mkChips('#g-light','light',LIGHTS.map(function(s,i){return {v:i,l:s[0]};}),true);
+ mkChips('#g-cam','cam',CAMS.map(function(s,i){return {v:i,l:s[0]};}),true);
+ mkChips('#g-ratio','ratio',RATIOS.map(function(r){return {v:r,l:r};}),false);
+ mkChips('#g-look','look',LOOKS.map(function(l){return {v:l.id,h:'<i class="sw" style="background:linear-gradient(135deg,'+l.sw[0]+','+l.sw[1]+')"></i>'+l.n};}),false);
+ mkChips('#g-font','font',FONTS.map(function(f){return {v:f[0],l:f[1]};}),false);
+ mkChips('#g-tcase','tcase',TCASE.map(function(f){return {v:f[0],l:f[1]};}),true);
+ mkChips('#g-ttrack','ttrack',TTRACK.map(function(f){return {v:f[0],l:f[1]};}),false);
+ mkChips('#g-talign','talign',TALIGN.map(function(f){return {v:f[0],l:f[1]};}),false);
+ mkChips('#g-tcanva','tcanva',TCANVA.map(function(f){return {v:f[0],l:f[1]};}),true);
+ mkChips('#g-tcapcut','tcapcut',TCAPCUT.map(function(f){return {v:f[0],l:f[1]};}),true);
+ var ph=$('#g-tpreset');
+ PRESETS.forEach(function(p){
+  var b=el('button','chip',esc(p.n));b.type='button';
+  b.addEventListener('click',function(){Object.keys(p.s).forEach(function(k){S[k]=p.s[k];});syncChips();buildOut();});
+  ph.appendChild(b);
+ });
+ mkChips('#g-tcolor','tcolor',TCOLORS.map(function(f){return {v:f[0],l:f[1]};}),false);
+ mkChips('#g-tpos','tpos',TPOS.map(function(f){return {v:f[0],l:f[1]};}),false);
+ mkChips('#g-frame','frame',FRAMES.map(function(f){return {v:f[0],l:f[1]};}),false);
+
+ mkSlider('#g-adj','Kecerahan',50,150,function(){return S.adj.b;},function(v){S.adj.b=v;});
+ mkSlider('#g-adj','Kontras',50,150,function(){return S.adj.c;},function(v){S.adj.c=v;});
+ mkSlider('#g-adj','Saturasi',0,200,function(){return S.adj.s;},function(v){S.adj.s=v;});
+ mkSlider('#g-adj','Vinyet',0,100,function(){return S.adj.v;},function(v){S.adj.v=v;});
+ mkSlider('#g-int','Intensitas efek',10,100,function(){return S.intensity;},function(v){S.intensity=v;},'%');
+
+ renderFx();renderStickers();
+
+ $('#subject').addEventListener('input',function(e){S.subject=e.target.value;buildOut();});
+ $('#neg').value=S.neg;
+ $('#neg').addEventListener('input',function(e){S.neg=e.target.value;buildOut();});
+ $('#txt').addEventListener('input',function(e){S.text=e.target.value;buildOut();});
+ $('#btnIdea').addEventListener('click',function(){
+  var t=IDEAS[Math.floor(Math.random()*IDEAS.length)];
+  S.subject=t;$('#subject').value=t;buildOut();
+ });
+
+ document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click',function(){
+   var tab=t.dataset.tab;
+   document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',x===t?'true':'false');});
+   ['prompt','look','fx','design'].forEach(function(n){$('#pane-'+n).hidden=(n!==tab);});
+  });
+ });
+
+ $('#btnReset').addEventListener('click',function(){
+  S.look='asli';S.adj={b:DEF_ADJ.b,c:DEF_ADJ.c,s:DEF_ADJ.s,v:DEF_ADJ.v};S.fx={};S.intensity=60;
+  S.text='';S.font='anton';S.tcase=null;S.ttrack='normal';S.talign='center';S.tcanva='outline';S.tcapcut=null;S.tcolor='white';S.tpos='bottom';S.frame='none';S.stk={};
+  $('#txt').value='';
+  syncs.forEach(function(fn){fn();});syncChips();renderFx();renderStickers();buildOut();
+ });
+ $('#cpMain').addEventListener('click',function(){if(cur.ready)copy(cur.text,$('#cpMain'));});
+ $('#cpAll').addEventListener('click',function(){
+  if(!cur.ready)return;
+  var t=cur.text+'\n\nNegative prompt: '+S.neg.trim()+'\nAspect ratio: '+S.ratio+' (--ar '+S.ratio+')';
+  copy(t,$('#cpAll'));
+ });
+
+ syncChips();buildOut();
+}
+init();
+})();
+</script>
+</body>
+</html>
